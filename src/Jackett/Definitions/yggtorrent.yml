@@ -148,12 +148,12 @@ d:nth-child(2) > button.text:contains('Se connecter')"
       seeders:
         text: 0
       seeders:
-        selector: "td[style^='color:#058c05;']"
+        selector: "td:nth-child(5)"
         optional: true
       leechers:
         text: 0
       leechers:
-        selector: "td[style^='color:#ff5252;']"
+        selector: "td:nth-child(6)"
         optional: true
       downloadvolumefactor:
         text: "1"
