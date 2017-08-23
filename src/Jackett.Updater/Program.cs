@@ -185,8 +185,11 @@ namespace Jackett.Updater
                 "Definitions/rarbg.yml",
                 "Definitions/t411.yml",
                 "Definitions/hdbc.yml", // renamed to hdbitscom
+                "Definitions/maniatorrent.yml",
                 "Definitions/nyaa.yml",
                 "Definitions/nachtwerk.yml",
+                "Definitions/leparadisdunet.yml",
+                "Definitions/qctorrent.yml",
             };
 
             foreach (var oldFIle in oldFiles)

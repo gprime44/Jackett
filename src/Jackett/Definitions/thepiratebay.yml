@@ -73,7 +73,12 @@
   settings: []
   
   search:
-    path: "{{if .Query.Keywords}}/search/{{ .Query.Keywords}}/0/99/{{range .Categories }}{{.}}{{end}}{{else}}/recent{{end}}"
+    path: "{{if .Query.Keywords}}/search/{{ .Keywords}}/0/99/{{range .Categories }}{{.}}{{end}}{{else}}/recent{{end}}"
+    keywordsfilters:
+        # currently, the only uploader for General Hospital puts a space between season and episode
+        # this filter searches both formats, so "General Hospital S01E02" becomes "General Hospital S01E02 | (S01 E02)"
+      - name: re_replace
+        args: ["General Hospital S(\\d{2,3})E(\\d{2,3})", "$0 | \\(S$1 E$2\\)"]
     rows:
       selector: "#searchResult tbody tr:has(td.vertTh)"
     fields:
@@ -85,6 +90,9 @@
             args: [ "/", -1 ]
       title:
         selector: .detLink
+        filters:
+          - name: replace
+            args: ["\u000f", ""] # get rid of unwanted character (Example: at the end of https://thepiratebay.org/torrent/18316540/Game.of.Thrones.S07E04.iNTERNAL.1080p.WEBRip.x264-MOROSE_)
       details:
         selector: .detLink
         attribute: href

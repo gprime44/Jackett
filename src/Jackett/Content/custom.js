@@ -33,9 +33,12 @@ $(document).ready(function () {
 	        return opts.inverse(this);
 	});
 
+    var index = window.location.pathname.indexOf("/UI");
+    var pathPrefix = window.location.pathname.substr(0, index);
+    api.root = pathPrefix + api.root;
+
     bindUIButtons();
     loadJackettSettings();
-    openSearchIfNecessary();
 });
 
 function openSearchIfNecessary() {
@@ -55,7 +58,7 @@ function insertWordWrap(str) {
 
 function getJackettConfig(callback) {
     api.getServerConfig(callback).fail(function () {
-        doNotify("Error loading Jackett settings, request to Jackett server failed", "danger", "glyphicon glyphicon-alert");
+        doNotify("Error loading Jackett settings, request to Jackett server failed, is server running ?", "danger", "glyphicon glyphicon-alert");
     });
 }
 
@@ -70,6 +73,8 @@ function loadJackettSettings() {
         if (basePath === null || basePath === undefined) {
             basePath = '';
         }
+
+        api.key = data.api_key;
 
         $("#jackett-savedir").val(data.blackholedir);
         $("#jackett-allowext").attr('checked', data.external);
@@ -135,8 +140,9 @@ function reloadIndexers() {
         }
         displayConfiguredIndexersList(configuredIndexers);
         $('#indexers div.dataTables_filter input').focusWithoutScrolling();
+        openSearchIfNecessary();
     }).fail(function () {
-        doNotify("Error loading indexers, request to Jackett server failed", "danger", "glyphicon glyphicon-alert");
+        doNotify("Error loading indexers, request to Jackett server failed, is server running ?", "danger", "glyphicon glyphicon-alert");
     });
 }
 
@@ -207,8 +213,13 @@ function displayUnconfiguredIndexersList() {
 		                    }
 		                    doNotify("Configuration failed: " + data.error, "danger", "glyphicon glyphicon-alert");
 		                }
-			        }).fail(function () {
-			            doNotify("Request to Jackett server failed", "danger", "glyphicon glyphicon-alert");
+			        }).fail(function (data) {
+			            if(data.responseJSON.error !== undefined) {
+                doNotify("An error occured while configuring this indexer<br /><b>" + data.responseJSON.error + "</b><br /><i><a href=\"https://github.com/Jackett/Jackett/issues/new?title=[" + indexerId + "] " + data.responseJSON.error + " (Config)\" target=\"_blank\">Click here to open an issue on Github for this indexer.</a><i>", "danger", "glyphicon glyphicon-alert", false);
+            } else {
+                doNotify("An error occured while configuring this indexer, is Jackett server running ?", "danger", "glyphicon glyphicon-alert");
+            }
+                        
 			        });
                 });
             });
@@ -423,8 +434,13 @@ function testIndexer(id, notifyResult) {
             if (notifyResult)
                 doNotify("Test failed for " + id + ": \n" + data.error, "danger", "glyphicon glyphicon-alert");
         }
-    }).fail(function () {
-        doNotify("Error testing indexer, request to Jackett server error", "danger", "glyphicon glyphicon-alert");
+    }).fail(function (data) {
+        updateTestState(id, "error", data.error, indexers);
+        if(data.responseJSON.error !== undefined && notifyResult) {
+                doNotify("An error occured while testing this indexer<br /><b>" + data.responseJSON.error + "</b><br /><i><a href=\"https://github.com/Jackett/Jackett/issues/new?title=[" + id + "] " + data.responseJSON.error + " (Test)\" target=\"_blank\">Click here to open an issue on Github for this indexer.</a><i>", "danger", "glyphicon glyphicon-alert", false);
+            } else {
+                doNotify("An error occured while testing indexers, please take a look at indexers with failed test for more informations.", "danger", "glyphicon glyphicon-alert");
+            }
     });
 }
 
@@ -605,8 +621,12 @@ function populateSetupForm(indexerId, name, config, caps, link, alternativesitel
                 }
                 doNotify("Configuration failed: " + data.error, "danger", "glyphicon glyphicon-alert");
             }
-        }).fail(function () {
-            doNotify("Request to Jackett server failed", "danger", "glyphicon glyphicon-alert");
+        }).fail(function (data) {
+            if(data.responseJSON.error !== undefined) {
+                doNotify("An error occured while updating this indexer<br /><b>" + data.responseJSON.error + "</b><br /><i><a href=\"https://github.com/Jackett/Jackett/issues/new?title=[" + indexerId + "] " + data.responseJSON.error + " (Config)\" target=\"_blank\">Click here to open an issue on Github for this indexer.</a><i>", "danger", "glyphicon glyphicon-alert", false);
+            } else {
+                doNotify("An error occured while updating this indexer, request to Jackett server failed, is server running ?", "danger", "glyphicon glyphicon-alert");
+            }
         }).always(function () {
             $goButton.html(originalBtnText);
             $goButton.prop('disabled', false);
@@ -720,6 +740,7 @@ function showSearch(selectedIndexer, query) {
 
     releaseDialog.on('hidden.bs.modal', function (e) {
         $('#indexers div.dataTables_filter input').focusWithoutScrolling();
+        window.location.hash = '';
     }) ;
 
     var setCategories = function (tracker, items) {
@@ -735,9 +756,9 @@ function showSearch(selectedIndexer, query) {
         }
         var select = $('#searchCategory');
         select.html("<option value=''>-- All --</option>");
-        $.each(cats, function (value, key) {
+        $.each(cats, function (index, value) {
             select.append($("<option></option>")
-                .attr("value", value).text(key + ' (' + value + ')'));
+                .attr("value", value["ID"]).text(value["ID"] + ' (' + value["Name"] + ')'));
         });
     };
 
@@ -1087,7 +1108,7 @@ function bindUIButtons() {
             basepathoverride: jackett_basepathoverride,
             omdbkey: jackett_omdb_key
         };
-        api.updateServerConfig(function (data) {
+        api.updateServerConfig(jsonObject, function (data) {
             if (data !== undefined && data.result == "error") {
                 doNotify("Error: " + data.error, "danger", "glyphicon glyphicon-alert");
                 return;
